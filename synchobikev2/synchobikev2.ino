@@ -17,7 +17,7 @@ painlessMesh  mesh;
 #endif
 
 #define LED_PIN     13 // This pin is ignorred when using FASTLED_ESP8266_DMA
-#define NUM_LEDS    50
+#define NUM_LEDS    150
 #define BRIGHTNESS  255 // Range 0 - 255
 #define LED_TYPE    WS2811
 #define COLOR_ORDER GRB
@@ -79,11 +79,11 @@ void nodeTimeAdjustedCallback(int32_t offset) {
 }
 
 void setup() {
-  //Serial.begin(115200);
+  Serial.begin(115200);
 
   // all types on
-//mesh.setDebugMsgTypes( ERROR | MESH_STATUS | CONNECTION | SYNC | COMMUNICATION | GENERAL | MSG_TYPES | REMOTE ); 
-  //mesh.setDebugMsgTypes( ERROR | STARTUP );  // set before init() so that you can see startup messages
+  mesh.setDebugMsgTypes( ERROR | MESH_STATUS | CONNECTION | SYNC | COMMUNICATION | GENERAL | MSG_TYPES | REMOTE ); 
+  mesh.setDebugMsgTypes( ERROR | STARTUP );  // set before init() so that you can see startup messages
 
   mesh.init( MESH_PREFIX, MESH_PASSWORD, MESH_PORT );
   mesh.onReceive(&receivedCallback);
@@ -118,7 +118,7 @@ void loop() {
     showLEDs();
   }
   EVERY_N_MILLISECONDS(1000) {
-    printf("s: %d\n", getSecond());
+    printf("s2: %d\n", getSecond());
   }
 }
 
@@ -143,7 +143,9 @@ uint32_t getMinute(){
 // Array of animation functions to play through.
 typedef void (*SimplePatternList[])();
 SimplePatternList _animations = {
-  fillNoise, confettiNoise, sparkles, firework, pride
+  fillNoise, confettiNoise, sparkles, firework, pride, backAndForth, doubleRainbow
+//  doubleRainbow, pride, backAndForth
+
 };
 
 // Index of the current animation.
@@ -160,7 +162,7 @@ void showLEDs(){
     Serial.printf("animation: %u\n", _currentAnimation);
     
     // Do any animation-specific reset here.
-    
+    resetState();
     firework_eased = 0;
     firework_count = 0;
     firework_lerpVal = 0;
@@ -307,6 +309,8 @@ void changeDirection(){
         direction_change = random(5,6);
         prev_direction_time = direction_time;
         force_direction_change = false;
+
+        resetState();
     }
 }
 
@@ -369,15 +373,16 @@ float easeOutQuint(float t) {
 }
 
 
+
 //
 // Pride animation
 //
+uint16_t sPseudotime = 0;
+uint16_t sLastMillis = 0;
+uint16_t sHue16 = 0;
 
 void pride() 
 {
-  static uint16_t sPseudotime = 0;
-  static uint16_t sLastMillis = 0;
-  static uint16_t sHue16 = 0;
  
   uint8_t sat8 = beatsin88( 87, 220, 250);
   uint8_t brightdepth = beatsin88( 341, 96, 224);
@@ -416,38 +421,67 @@ void pride()
 
 //
 // Back and forth animation
-// NOTE: this needs a re-write
 //
+
+int directionBF = 1;
+int currentLedBF = 0;
+uint8_t hueBF = 0;
 
 void fadeall() { for(int i = 0; i < NUM_LEDS; i++) { leds[i].nscale8(250); } }
 
-void backAndForth() { 
-	static uint8_t hue = 0;
-	Serial.print("x");
+void backAndForth(){
 	// First slide the led in one direction
-	for(int i = 0; i < NUM_LEDS; i++) {
-		// Set the i'th led to red 
-		leds[i] = CHSV(hue++, 255, 255);
-		// Show the leds
-		FastLED.show(); 
-		// now that we've shown the leds, reset the i'th led to black
-		// leds[i] = CRGB::Black;
-		fadeall();
-		// Wait a little bit before we loop around and do it again
-		delay(10);
-	}
-	Serial.print("x");
+  // Set the i'th led to red 
+  leds[currentLedBF] = CHSV(hueBF++, 255, 255);
+  // Show the leds
+  FastLED.show(); 
+  // now that we've shown the leds, reset the i'th led to black
+  // leds[i] = CRGB::Black;
+  fadeall();
+  // Wait a little bit before we loop around and do it again
+  delay(10);
 
-	// Now go in the other direction.  
-	for(int i = (NUM_LEDS)-1; i >= 0; i--) {
-		// Set the i'th led to red 
-		leds[i] = CHSV(hue++, 255, 255);
-		// Show the leds
-		FastLED.show();
-		// now that we've shown the leds, reset the i'th led to black
-		// leds[i] = CRGB::Black;
-		fadeall();
-		// Wait a little bit before we loop around and do it again
-		delay(10);
-	}
+  currentLedBF+=directionBF;
+  if (currentLedBF > NUM_LEDS){
+    directionBF = -1;
+  } else if (currentLedBF < 0){
+    directionBF = 1;
+    hueBF = 0;
+  }
+}
+
+
+//
+// Double Rainbox animation
+//
+float doubleRainbowHue = 0;
+
+void doubleRainbow() {
+  uint8_t sinBeat = beatsin8(15, 0, NUM_LEDS - 1, 0, 0);
+  leds[sinBeat] = CHSV((uint8_t)doubleRainbowHue, 255, 255);
+  leds[NUM_LEDS-sinBeat] = CHSV((uint8_t)doubleRainbowHue, 255, 255);
+  fadeToBlackBy(leds, NUM_LEDS, 5);
+
+  doubleRainbowHue+=.1;
+
+  FastLED.show();
+}
+
+
+//
+// Reset state variables for Cooper added logic (which only partially gels with orignal code)
+//
+void resetState(){
+  // Pride
+  sPseudotime = 0;
+  sLastMillis = 0;
+  sHue16 = 0;
+
+  // Back and forth
+  directionBF = 1;
+  currentLedBF = 0;
+  hueBF = 0;
+
+  // Double Rainbow
+  doubleRainbowHue = 0;
 }
