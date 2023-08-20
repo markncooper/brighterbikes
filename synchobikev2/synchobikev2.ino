@@ -158,8 +158,8 @@ void showLEDs(){
   int animation = (getSecond() / HOLD_ANIMATION_X_TIMES_AS_LONG) % numberOfAnimations;
     
   if (animation != _currentAnimation || force_pallet_change){
+    Serial.printf("animation: %u, %u, %u\n", animation, _currentAnimation, force_pallet_change);
     _currentAnimation = animation;
-    Serial.printf("animation: %u\n", _currentAnimation);
     
     // Do any animation-specific reset here.
     resetState();
@@ -280,6 +280,7 @@ uint8_t hueMatch(uint8_t hue, uint8_t SchemeNumber) {
     case 7: return hue-106;
         break; 
     }
+    return 0;
 }
 
 /* =============== NOISE ANIMATION =============== */
@@ -484,4 +485,6 @@ void resetState(){
 
   // Double Rainbow
   doubleRainbowHue = 0;
+  force_pallet_change = false;
+
 }
