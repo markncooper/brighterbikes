@@ -19,7 +19,7 @@ painlessMesh  mesh;
 #define LED_PIN     13 // This pin is ignorred when using FASTLED_ESP8266_DMA
 #define NUM_LEDS    150
 #define BRIGHTNESS  255 // Range 0 - 255
-#define LED_TYPE    WS2811
+#define LED_TYPE    WS2812
 #define COLOR_ORDER GRB
 CRGB leds[NUM_LEDS];
 CRGB leds_real[NUM_LEDS];
